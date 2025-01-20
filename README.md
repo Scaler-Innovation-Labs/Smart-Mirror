@@ -6,12 +6,6 @@
 
 **Objective**To create an user-friendly smart mirror that enhances the user's daily self-care routine by offering guidance and compliments, focusing on features like outfit suggestions, makeup recommendations, and personalized conversation.
 
-**Project Details:** Smart Mirror is a project under Innovation Lab. Eligibility criteria to apply is having above 8 CGR, three students will be selected and put in a team to build this project. Students who are selected for it, can either:
-
-1. Earn additional credits for this project work, which could be replaced for up to three months of internship requirement OR Get exemption for one term development course, and earn their credits through this project 
-
-2. Fill this for to apply for this project: <https://forms.gle/NQnRrjPWHaRjb66N6>
-
 ***
 
 
