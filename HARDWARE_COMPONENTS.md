@@ -12,9 +12,9 @@ Raspberry Pi is compact, powerful, and versatile. It can handle computer vision 
 
 ## 2. Camera Module
 
-**Raspberry Pi Camera Module 3 (Wide Angle)**  
-[Link](https://www.amazon.in/Arducam-Raspberry-Camera-Module-IMX708/dp/B0D2QK3QXQ/ref=sr_1_4?nsdOptOutParam=true&sr=8-4)  
-Cost: ₹7,698 *(finding cheaper options)*  
+**Raspberry Pi 5Mp AGP Gddr3 Camera Board Module**  
+[Link](https://www.amazon.in/Raspberry-5MP-Camera-Board-Module/dp/B00E1GGE40/ref=sr_1_3?sr=8-3)  
+Cost: ₹380
 
 This module is compatible with the Raspberry Pi and offers high-quality image capture with a wide-angle lens, making it suitable for capturing full-body images for outfit analysis.
 
@@ -22,9 +22,9 @@ This module is compatible with the Raspberry Pi and offers high-quality image ca
 
 ## 3. Microphone
 
-**Robocraze USB 2.0 Mini Microphone**  
+**Microphone Sound Sensor Module**  
 [Link](https://www.amazon.in/Robocraze-Microphone-Raspberry-Recognition-Software/dp/B08F2HY9D2/ref=sr_1_5?sr=8-5)  
-Cost: ₹385  
+Cost: ₹99 
 
 The ReSpeaker Pi HAT is specifically designed for Raspberry Pi, making integration easier.
 
@@ -55,7 +55,7 @@ To detect when someone approaches the mirror, allowing the device to wake up or 
 **5V 3A USB-C Power Supply**  
 [Link](https://www.amazon.in/Raspberry-Pi-15-3W-USB-C-Supply/dp/B07XY8F3P7/ref=sr_1_2?sr=8-2)  
 Cost: ₹799  
-
+### OR
 **Pisugar S Portable 1200 mAh UPS Lithium Battery**  
 [Link](https://www.amazon.in/Portable-Pwnagotchi-Raspberry-Accessories-handhold/dp/B097RC8KLQ/ref=sr_1_3?s=electronics&sr=1-3)  
 Cost: ₹7,320  
@@ -93,4 +93,10 @@ To perform API calls.
 
 ---
 
-## Total Cost: ₹7,442
+## 11. Button
+
+[Link](https://www.amazon.in/oceanlabz-Momentary-Responsive-Electronics-Applications/dp/B0D9SHYDQY/ref=sr_1_7?sr=8-7)
+Cost: ₹50
+
+
+## Total Cost: ₹7,586
