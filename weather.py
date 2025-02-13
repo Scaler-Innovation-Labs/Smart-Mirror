@@ -16,7 +16,7 @@ class Weather:
         g: Any = geocoder.ip('me')
         lat: float = g.latlng[0]
         lon: float = g.latlng[1]
-        print(lat, lon)
+        # print(lat, lon)
         self.get_weather(lat, lon)
 
     def get_weather(self, lat: float, lon: float) -> Any:
@@ -24,8 +24,8 @@ class Weather:
         response: Response = requests.get(url)
         data: Any = response.json()
         # print(data)
-        return data
+        return f"{data['main']['temp']},{data['weather'][0]['main']}"
+
 
 weather = Weather()
 weather.get_coordinates()
-
