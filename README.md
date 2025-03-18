@@ -6,8 +6,11 @@
 
 **Objective**To create an user-friendly smart mirror that enhances the user's daily self-care routine by offering guidance and compliments, focusing on features like outfit suggestions, makeup recommendations, and personalized conversation.
 
-**Hardware Components** [Link](HARDWARE_COMPONENTS.md)
-**UX Steps for Mirror** [Link](UX.md)
+## Links
+- 🌐 **Deployed Website:** [Smart Mirror Web App](https://neerasa-veda-varshit.github.io/smart-mirror-webapp/)
+- 📸 **Instagram:** [Smart Mirror SST](https://www.instagram.com/smart_mirror_sst/)
+- **Hardware Components** [Link](HARDWARE_COMPONENTS.md)
+- **UX Steps for Mirror** [Link](UX.md)
 
 ***
 
