@@ -1,47 +1,4 @@
 import speech_recognition as sr
-from speech_recognition_module import SpeechRecognizer
-from openai_nlp import NLPProcessor
-from text_to_speech import TextToSpeech
-
-def main():
-    recognizer = SpeechRecognizer()
-    nlp = NLPProcessor()
-    tts = TextToSpeech()
-
-    listener = sr.Recognizer()
-
-    while True:
-        try:
-            with sr.Microphone() as source:
-                print("🎧 Listening for 'Hey Mirror'...")
-                listener.adjust_for_ambient_noise(source)
-                voice = listener.listen(source)
-                command = listener.recognize_google(voice).lower()
-
-                if "hey mirror" in command:
-                    print("✅ Wake word detected!")
-                    
-                    # Convert speech to transcript
-                    transcript = recognizer.recognize_speech()
-
-                    if transcript:
-                        print(f"🗣 You said: {transcript}")
-
-                        # Process with OpenAI
-                        response = nlp.generate_response(transcript)
-                        print(f"🤖 AI Response: {response}")
-
-                        # Speak out the response
-                        tts.speak(response)
-
-        except Exception as e:
-            print("❌ Error:", e)
-
-if __name__ == "__main__":
-    main()
-
-'''
-import speech_recognition as sr
 import time
 from speech_recognition_module import SpeechRecognizer
 from openai_nlp import NLPProcessor
@@ -115,4 +72,3 @@ class SmartMirror:
 if __name__ == "__main__":
     mirror = SmartMirror()
     mirror.run()
-'''
