@@ -1,4 +1,3 @@
-import speech_recognition as sr
 import time
 from speech_recognition_module import SpeechRecognizer
 from openai_nlp import NLPProcessor
@@ -6,52 +5,37 @@ from text_to_speech import TextToSpeech
 
 class SmartMirror:
     def __init__(self, silence_threshold=6):
-        self.listener = sr.Recognizer()
+        """Initialize components and settings."""
         self.silence_threshold = silence_threshold
-        self.recognizer = SpeechRecognizer()
-        self.nlp = NLPProcessor()
-        self.tts = TextToSpeech()
+        self.recognizer = SpeechRecognizer()  # Speech Recognition Module
+        self.nlp = NLPProcessor()  # OpenAI NLP Module
+        self.tts = TextToSpeech()  # Text-to-Speech Module
 
     def listen_for_wake_word(self):
         """Continuously listen for 'Hey Mirror' and activate when detected."""
-        with sr.Microphone() as source:
-            print("🎧 Listening for 'Hey Mirror'...")
-            self.listener.adjust_for_ambient_noise(source)
-            audio = self.listener.listen(source)
-
-            try:
-                command = self.listener.recognize_google(audio).lower()
-                if "hey mirror" in command:
-                    print("✅ Wake word detected!")
-                    return True
-            except sr.UnknownValueError:
-                print("🤔 Could not understand.")
-            except sr.RequestError as e:
-                print(f"⚠️ Google Speech Recognition error: {e}")
-        return False
+        print("🎧 Listening for 'Hey Mirror'...")
+        while True:
+            command = self.recognizer.recognize_speech()
+            if command and "hey mirror" in command.lower():
+                print("✅ Wake word detected!")
+                return True
 
     def get_transcript(self):
-        """Listen and transcribe user's command."""
-        with sr.Microphone() as source:
-            print("🎙 Speak now... ")
-            self.listener.adjust_for_ambient_noise(source)
-            audio = self.listener.listen(source, timeout=self.silence_threshold)
-            try:
-                transcript = self.listener.recognize_google(audio).strip()
-                print(f"🗣 You said: {transcript}")
-                return transcript
-            except sr.UnknownValueError:
-                print("🤔 Could not understand speech.")
-            except sr.RequestError as e:
-                print(f"⚠️ Speech recognition error: {e}")
+        """Listen for user speech and return transcribed text."""
+        print("🎙 Speak now... ")
+        transcript = self.recognizer.recognize_speech()
+        if transcript:
+            print(f"🗣 You said: {transcript}")
+            return transcript
+        print("🤔 Could not understand speech.")
         return None
 
     def get_gpt_response(self, transcript):
-        """Send the transcript to GPT and get a response."""
+        """Send user speech to OpenAI and get a response."""
         response = self.nlp.generate_response(transcript)
         if response:
             print(f"🤖 AI Response: {response}")
-            self.tts.speak(response)
+            self.tts.speak(response)  # Convert AI response to speech
         return response
 
     def run(self):
