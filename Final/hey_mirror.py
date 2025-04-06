@@ -1,7 +1,18 @@
 import time
+from threading import Thread
+import cv2
 from speech_recognition_module import SpeechRecognizer
 from openai_nlp import NLPProcessor
 from text_to_speech import TextToSpeech
+from image_nlp_processor import ImageNLPProcessor
+
+class Camera:
+    @staticmethod
+    def capture_frame():
+        cap = cv2.VideoCapture(0)
+        ret, frame = cap.read()
+        cv2.imwrite('image.jpg', frame)
+        return 'image.jpg'
 
 class SmartMirror:
     def __init__(self, silence_threshold=6):
@@ -9,6 +20,7 @@ class SmartMirror:
         self.silence_threshold = silence_threshold
         self.recognizer = SpeechRecognizer()  # Speech Recognition Module
         self.nlp = NLPProcessor()  # OpenAI NLP Module
+        self.inp = ImageNLPProcessor() # OpenAI GPT4 Vision Preview
         self.tts = TextToSpeech()  # Text-to-Speech Module
 
     def listen_for_wake_word(self):
@@ -31,8 +43,10 @@ class SmartMirror:
         return None
 
     def get_gpt_response(self, transcript):
-        """Send user speech to OpenAI and get a response."""
-        response = self.nlp.generate_response(transcript)
+        """Send user speech and image to OpenAI and get a response."""
+        file_path = Camera.capture_frame()
+
+        response = self.inp.generate_response(transcript, file_path)
         if response:
             print(f"🤖 AI Response: {response}")
             self.tts.speak(response)  # Convert AI response to speech
