@@ -5,7 +5,7 @@ def find_bluetooth_mic(name_hint="bcm2835 Headphones"):
         print(f"Device {index}: {name}")  # List all devices
         if name_hint.lower() in name.lower():
             return index
-    return None
+    return 0
 
 # Automatically get the Bluetooth microphone index
 bt_mic_index = find_bluetooth_mic()
