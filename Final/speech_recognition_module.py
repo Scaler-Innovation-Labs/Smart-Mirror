@@ -1,6 +1,6 @@
 import speech_recognition as sr
 
-def find_bluetooth_mic(name_hint="F0:BE:25"):
+def find_bluetooth_mic(name_hint="bcm2835 Headphones"):
     for index, name in enumerate(sr.Microphone.list_microphone_names()):
         print(f"Device {index}: {name}")  # List all devices
         if name_hint.lower() in name.lower():
