@@ -1,4 +1,8 @@
 import speech_recognition as sr
+import os
+import ctypes
+asound = ctypes.cdll.LoadLibrary('libasound.so')
+asound.snd_lib_error_set_handler(None)
 
 def find_bluetooth_mic(name_hint="bcm2835 Headphones"):
     for index, name in enumerate(sr.Microphone.list_microphone_names()):
