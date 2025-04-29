@@ -1,55 +1,18 @@
-import cv2
-import speech_recognition as sr # pip install SpeechRecognition
-import threading
+from hey_mirror import SmartMirror
+import subprocess
 
-listener = sr.Recognizer()
-
-# Type annotation shorthands
-_camera_frame = cv2.typing.MatLike
-
-# Variables
-camera_open: bool = True
-
-def take_command() -> str:
-    command: str = ""
+def capture_image(image_path="/home/captured_image.jpg"):
+    command = ["libcamera-still", "-o", image_path]
     try:
-        with sr.Microphone() as source:
-            print('listening...')
-            voice = listener.listen(source)
-            command = listener.recognize_google(voice)
-            command = command.lower()
-            if command.startswith("hey mirror"):
-                command = command.replace("hey mirror", '')
-                return command
-
-    except Exception as e:
-        print(e)
-
-def process_speech() -> None:
-    command = take_command()
-    if command: print(command)
+        subprocess.run(command, check=True)
+        print(f"📸 Image captured successfully at: {image_path}")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to capture image: {e}")
 
 if __name__ == "__main__":
-    cap = cv2.VideoCapture(0)  # Open default camera (0)
+    mirror = SmartMirror()
 
-    if not cap.isOpened():
-        print("Error: Could not open camera.")
-        camera_open = False
-
-    while camera_open:
-        ret, frame = cap.read()  # Read a frame from the camera
-        frame = cv2.flip(frame, 1)
-        
-        if not ret:
-            print("Error: Could not read frame.")
-            break
-
-        if threading.active_count() == 1: threading.Thread(target=process_speech, daemon=True).start()
-        
-        cv2.imshow("Camera Feed", frame)  # Display the frame
-        
-        if cv2.waitKey(1) & 0xFF == ord("q"):  # Press 'q' to exit
-            break
-
-    cap.release()  # Release the camera
-    cv2.destroyAllWindows()  # Close all OpenCV windows
+    while True:
+        transcript, response = mirror.run_once()
+        if transcript and response:
+            capture_image()  # Only capture after full interaction
