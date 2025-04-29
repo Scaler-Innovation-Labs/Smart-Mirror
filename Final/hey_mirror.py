@@ -38,21 +38,13 @@ class SmartMirror:
             self.tts.speak(response)  # Convert AI response to speech
         return response
 
-    def run(self):
-        """Main loop to listen, process speech, and respond."""
-        while True:
-            if self.listen_for_wake_word():
-                while True:
-                    transcript = self.get_transcript()
-                    if not transcript:
-                        print("🛑 No response detected. Listening for 'Hey Mirror' again...")
-                        break  # Exit to listen for wake word again
+    def run_once(self):
+        """Run a single interaction: wake word → command → response"""
+        if self.listen_for_wake_word():
+            transcript = self.get_transcript()
+            if not transcript:
+                return None, None
 
-                    response = self.get_gpt_response(transcript)
-                    if not response:
-                        print("🛑 AI did not respond. Stopping conversation.")
-                        break  # Stop if GPT has no response
-
-if __name__ == "__main__":
-    mirror = SmartMirror()
-    mirror.run()
+            response = self.get_gpt_response(transcript)
+            return transcript, response
+        return None, None
