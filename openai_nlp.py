@@ -75,10 +75,10 @@ class NLPProcessor:
         except Exception as e:
             return f"⚠️ Unexpected Error: {e}"
             
-if __name__ == "__main__":
-    nlp_processor = NLPProcessor()
-    image_urls = nlp_processor.fetch_wardrobe_items()
+# if __name__ == "__main__":
+#     nlp_processor = NLPProcessor()
+#     image_urls = nlp_processor.fetch_wardrobe_items()
 
-    user_prompt = "Suggest only one stylish outfit using these wardrobe items for a party"
-    result = nlp_processor.generate_response_with_images(user_prompt, image_urls)
-    print(result)
+#     user_prompt = "Suggest only one stylish outfit using these wardrobe items for a party"
+#     result = nlp_processor.generate_response_with_images(user_prompt, image_urls)
+#     print(result)
