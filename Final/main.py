@@ -1,7 +1,7 @@
 from hey_mirror import SmartMirror
 import subprocess
 
-def capture_image(image_path="/home/captured_image.jpg"):
+def capture_image(image_path="/home/smart-mirror/Pictures/captured_image.jpg"):
     command = ["libcamera-still", "-o", image_path]
     try:
         subprocess.run(command, check=True)
@@ -13,6 +13,7 @@ if __name__ == "__main__":
     mirror = SmartMirror()
 
     while True:
-        transcript, response = mirror.run_once()
-        if transcript and response:
-            capture_image()  # Only capture after full interaction
+        transcript= mirror.run_once()
+        if transcript:
+            capture_image() 
+            mirror.get_gpt_response(transcript)

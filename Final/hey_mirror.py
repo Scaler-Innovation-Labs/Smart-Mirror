@@ -32,7 +32,7 @@ class SmartMirror:
 
     def get_gpt_response(self, transcript):
         """Send user speech to OpenAI and get a response."""
-        response = self.nlp.generate_response(transcript)
+        response = self.nlp.generate_response(transcript, image="home/smart-mirror/Pictures/captured_image.jpg")
         if response:
             print(f"🤖 AI Response: {response}")
             self.tts.speak(response)  # Convert AI response to speech
@@ -45,6 +45,5 @@ class SmartMirror:
             if not transcript:
                 return None, None
 
-            response = self.get_gpt_response(transcript)
-            return transcript, response
+            return transcript
         return None, None
