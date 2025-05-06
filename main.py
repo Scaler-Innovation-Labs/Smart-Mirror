@@ -12,8 +12,7 @@ def capture_image(image_path="/home/smart-mirror/Pictures/captured_image.jpg"):
 if __name__ == "__main__":
     mirror = SmartMirror()
 
-    while True:
-        transcript= mirror.run_once()
-        if transcript:
-            capture_image() 
-            mirror.get_gpt_response(transcript)
+    transcript= mirror.run_once()
+    if transcript:
+        capture_image() 
+        mirror.get_gpt_response(transcript)

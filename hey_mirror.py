@@ -15,7 +15,7 @@ class SmartMirror:
         """Continuously listen for 'Hey Mirror' and activate when detected."""
         print("🎧 Listening for 'Hey Mirror'...")
         while True:
-            command = self.recognizer.recognize_speech()
+            command = self.recognizer.recognize()
             if command and "hey mirror" in command.lower():
                 print("✅ Wake word detected!")
                 return True
@@ -23,7 +23,7 @@ class SmartMirror:
     def get_transcript(self):
         """Listen for user speech and return transcribed text."""
         print("🎙 Speak now... ")
-        transcript = self.recognizer.recognize_speech()
+        transcript = self.recognizer.recognize()
         if transcript:
             print(f"🗣 You said: {transcript}")
             return transcript
@@ -32,9 +32,12 @@ class SmartMirror:
 
     def get_gpt_response(self, transcript):
         """Send user speech to OpenAI and get a response."""
-        response = self.nlp.generate_response(transcript, image="home/smart-mirror/Pictures/captured_image.jpg")
+        image_urls = self.nlp.fetch_wardrobe_items()
+        print(f" Image URLs: {image_urls}")
+        print(f"my Transcript: {transcript}")
+        response = self.nlp.generate_response_with_images(transcript,image_urls)
         if response:
-            print(f"🤖 AI Response: {response}")
+            print(f"AI Response: {response}")
             self.tts.speak(response)  # Convert AI response to speech
         return response
 

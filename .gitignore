@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-main/.venv/
-**/__pycache__/
-=======
+
 **/__pycache__/
 .env
 /env
->>>>>>> origin/application

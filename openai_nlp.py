@@ -12,10 +12,8 @@ class NLPProcessor:
             raise ValueError("Missing OpenAI API Key. Set it in .env file.")
 
         self.client = openai.OpenAI(api_key=self.OPENAI_API_KEY) 
-
-
     def fetch_wardrobe_items(self):
-        FASTAPI_URL = "http://localhost:8000"
+        FASTAPI_URL = "http://192.168.1.233:8000"
         try:
             response = requests.get(f"{FASTAPI_URL}/wardrobe")
             response.raise_for_status()
@@ -32,15 +30,18 @@ class NLPProcessor:
                     url = item.get("image_url", "").strip()
                     if url.startswith("http"):
                         all_image_urls.append(url)
-
+            print(all_image_urls)
             return all_image_urls
 
         except requests.exceptions.RequestException as e:
             print(f"Error fetching wardrobe items: {e}")
             return None
 
+
     def generate_response_with_images(self, text_input, image_urls):
         """Send text + image URLs to OpenAI GPT-4 Vision."""
+        print(f"Text Input: {text_input}")
+        print(f"Image URLs: {image_urls}")
         try:
             image_contents = [
                 {
@@ -77,7 +78,7 @@ class NLPProcessor:
             
 # if __name__ == "__main__":
 #     nlp_processor = NLPProcessor()
-#     image_urls = nlp_processor.fetch_wardrobe_items()
+#     nlp_processor.fetch_wardrobe_items()
 
 #     user_prompt = "Suggest only one stylish outfit using these wardrobe items for a party"
 #     result = nlp_processor.generate_response_with_images(user_prompt, image_urls)
