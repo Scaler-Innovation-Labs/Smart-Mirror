@@ -13,6 +13,28 @@ class NLPProcessor:
 
         self.client = openai.OpenAI(api_key=self.OPENAI_API_KEY) 
 
+    def detect_intent(self, prompt):
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """Analyze the user's request and respond with ONLY the relevant categories:
+                        - "outfit" if clothing is mentioned
+                        - "makeup" if cosmetics are mentioned
+                        - "jewelry" if accessories are mentioned
+                        Return only the relevant keywords separated by commas, or "general" if none apply."""
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=50,
+                temperature=0.1
+            )
+            return response.choices[0].message.content.lower()
+        except Exception as e:
+            print(f"Error detecting intent: {e}")
+            return "general"
 
     def fetch_wardrobe_items(self):
         FASTAPI_URL = "http://localhost:8000"
