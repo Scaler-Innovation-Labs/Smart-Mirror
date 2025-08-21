@@ -6,3 +6,4 @@ SpeechRecognition==3.14.1
 typing_extensions==4.12.2
 requests
 pyttsx3
+pyaudio==0.2.13

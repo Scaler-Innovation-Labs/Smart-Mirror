@@ -1,50 +1,72 @@
 import os
+import sys
 import speech_recognition as sr
 import logging
-from datetime import datetime
+from contextlib import contextmanager
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("SmartMirror")
+
+@contextmanager
+def suppress_stderr():
+    """Temporarily suppress C-level stderr (ALSA, JACK warnings)"""
+    fd = sys.stderr.fileno()
+    old_stderr = os.dup(fd)
+    with open(os.devnull, 'w') as devnull:
+        os.dup2(devnull.fileno(), fd)
+    try:
+        yield
+    finally:
+        os.dup2(old_stderr, fd)
+        os.close(old_stderr)
 
 class SpeechRecognizer:
     def __init__(self):
         self.recognizer = sr.Recognizer()
-        self.audio_file = "recording.wav"
-        self.recording_command = (
-            "arecord -D plughw:3,0 -f S16_LE -r 16000 -d 5 {}".format(self.audio_file)
-        )
-    def _cleanup(self):
-        """Remove temporary audio files"""
-        if os.path.exists(self.audio_file):
-            os.remove(self.audio_file)
-    
+
+        # Suppress ALSA/JACK logs during microphone access
+        with suppress_stderr():
+            mic_list = sr.Microphone.list_microphone_names()
+        logger.info("Available Microphones:")
+        for index, name in enumerate(mic_list):
+            logger.info(f"  [{index}] {name}")
+        
+        self.device_index = self.find_usb_microphone_index()
+
+        with suppress_stderr():
+            self.microphone = sr.Microphone(device_index=self.device_index)
+
+        with suppress_stderr():
+            with self.microphone as source:
+                self.recognizer.adjust_for_ambient_noise(source, duration=1)
+        logger.info("Calibrated microphone for ambient noise.")
+
+    def find_usb_microphone_index(self):
+        with suppress_stderr():
+            mic_list = sr.Microphone.list_microphone_names()
+        for index, name in enumerate(mic_list):
+            if "usb" in name.lower() or "pnp" in name.lower():
+                logger.info(f"USB mic found at index {index}: {name}")
+                return index
+        logger.warning("USB mic not found, using default index 0")
+        return 0
+
     def recognize(self):
-        """Record and recognize speech"""
         try:
-            # Record audio
-            logger.info("Recording... (speak now)")
-            os.system(self.recording_command)
-            
-            # Process recording
-            with sr.AudioFile(self.audio_file) as source:
-                audio = self.recognizer.record(source)
-                result = self.recognizer.recognize_google(audio).lower()
-                logger.info(f"Recognized: {result}")
-                return result
-                
+            logger.info("Listening... (speak now)")
+            with suppress_stderr():
+                with self.microphone as source:
+                    audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=5)
+            result = self.recognizer.recognize_google(audio).lower()
+            logger.info(f"Recognized: {result}")
+            return result
+
+        except sr.WaitTimeoutError:
+            logger.warning("Timeout: No speech detected.")
         except sr.UnknownValueError:
-            logger.warning("Google Speech Recognition could not understand audio")
+            logger.warning("Google could not understand the audio.")
         except sr.RequestError as e:
-            logger.error(f"Could not request results; {e}")
+            logger.error(f"Google request failed: {e}")
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
-        finally:
-            self._cleanup()
         return None
-
-# if __name__ == "__main__":
-#     recognizer = SpeechRecognizer()
-#     print("Speak after the beep...")
-#     result = recognizer.recognize()
-#     print(f"You said: {result}" if result else "No speech detected")
