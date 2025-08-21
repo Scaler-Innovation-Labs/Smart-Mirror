@@ -66,7 +66,6 @@ class NLPProcessor:
                             "Return a strict JSON object with the following keys:\n"
                             "- skin_tone: one of ['fair', 'light', 'medium', 'tan', 'deep']\n"
                             "- hair_texture: one of ['straight', 'wavy', 'curly', 'coily']\n"
-                            "If the face is unclear or partially visible, set clarity to 'poor'. "
                             "Do not add explanations, return only valid JSON."
                         )
                     },
@@ -106,7 +105,7 @@ class NLPProcessor:
                     {"role": "system", "content": "You are a professional fashion assistant."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=300
+                max_tokens=500
             )
             return response.choices[0].message.content
         except OpenAIError:
@@ -121,7 +120,7 @@ class NLPProcessor:
         }
         categories = [category_map[c] for c in requested_categories.split(",") if c in category_map]
         system_prompt = (
-            f"You are a professional number 1 fashion expert. Only suggest one outfit from the user's wardrobe unless explicitly asked otherwise according to the user's prompt. Jewlery and makeup suggestions should be based on the outfit ans user's skin tone and hair. "
+            f"You are a world-class professional fashion expert. Only suggest one outfit from the user's wardrobe unless explicitly asked otherwise according to the user's occasion, time and weather. Jewlery and makeup suggestions should be based on the outfit ans user's skin tone and hair. "
             f"Requested: {', '.join(categories)}."
         )
         messages = [
@@ -136,6 +135,6 @@ class NLPProcessor:
         response = self.client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
-            max_tokens=700
+            max_tokens=1000
         )
         return response.choices[0].message.content
