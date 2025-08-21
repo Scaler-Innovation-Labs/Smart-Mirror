@@ -23,6 +23,10 @@ def suppress_stderr():
 class SpeechRecognizer:
     def __init__(self):
         self.recognizer = sr.Recognizer()
+        # Set custom thresholds for speech recognition
+        self.recognizer.dynamic_energy_threshold = True
+        self.recognizer.pause_threshold = 1.2   # Allow short pauses without stopping
+        self.recognizer.energy_threshold = 300
 
         # Suppress ALSA/JACK logs during microphone access
         with suppress_stderr():
@@ -56,8 +60,10 @@ class SpeechRecognizer:
             logger.info("Listening... (speak now)")
             with suppress_stderr():
                 with self.microphone as source:
-                    audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=5)
+                    self.recognizer.adjust_for_ambient_noise(source, duration=2)
+                    audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=10)
             result = self.recognizer.recognize_google(audio).lower()
+
             logger.info(f"Recognized: {result}")
             return result
 

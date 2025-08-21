@@ -4,7 +4,7 @@ import requests
 from dotenv import load_dotenv
 import openai
 from openai import OpenAIError
-
+import json
 class NLPProcessor:
     def __init__(self):
         load_dotenv()
@@ -34,7 +34,7 @@ class NLPProcessor:
             return "general"
 
     def fetch_wardrobe_items(self):
-        FASTAPI_URL = "http://localhost:8000"
+        FASTAPI_URL = "http://192.168.13.212:8000"
         try:
             response = requests.get(f"{FASTAPI_URL}/wardrobe")
             response.raise_for_status()
@@ -51,29 +51,59 @@ class NLPProcessor:
 
     def analyze_user_image(self, image_path):
         """Analyze clarity, skin tone, and hair type."""
+
         base64_image = self.encode_image(image_path)
+        
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system",
-                     "content": "Analyze the image. Detect clarity, skin tone, hair texture. Respond as JSON with keys: clarity (good/poor), skin_tone, hair_texture."},
-                    {"role": "user",
-                     "content": [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}
+                   {
+                        "role": "system",
+                        "content": (
+                            "You are a professional stylist AI. "
+                            "Analyze only the person in the image. "
+                            "Return a strict JSON object with the following keys:\n"
+                            "- skin_tone: one of ['fair', 'light', 'medium', 'tan', 'deep']\n"
+                            "- hair_texture: one of ['straight', 'wavy', 'curly', 'coily']\n"
+                            "If the face is unclear or partially visible, set clarity to 'poor'. "
+                            "Do not add explanations, return only valid JSON."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Analyze this image carefully and return the requested JSON only."},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                        ]
+                    }
                 ],
                 max_tokens=200
             )
-            import json
-            return json.loads(response.choices[0].message.content)
-        except Exception:
+
+            # Clean and parse JSON safely
+            raw_output = response.choices[0].message.content.strip()
+            try:
+                result = json.loads(raw_output)
+            except json.JSONDecodeError:
+                # Attempt cleanup if model adds extra text
+                import re
+                json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
+                result = json.loads(json_match.group(0)) if json_match else {"clarity": "unknown"}
+
+            return result
+
+        except Exception as e:
+            print(f"Error analyzing image: {e}")
             return {"clarity": "poor"}
+
 
     def generate_response(self, prompt):
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "You are a helpful smart mirror assistant."},
+                    {"role": "system", "content": "You are a professional fashion assistant."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=300
@@ -91,7 +121,7 @@ class NLPProcessor:
         }
         categories = [category_map[c] for c in requested_categories.split(",") if c in category_map]
         system_prompt = (
-            f"You are a fashion expert. Only suggest from the user's wardrobe unless explicitly asked otherwise. "
+            f"You are a professional number 1 fashion expert. Only suggest one outfit from the user's wardrobe unless explicitly asked otherwise according to the user's prompt. Jewlery and makeup suggestions should be based on the outfit ans user's skin tone and hair. "
             f"Requested: {', '.join(categories)}."
         )
         messages = [

@@ -27,7 +27,7 @@ class SmartMirror:
         command = ["libcamera-still", "-o", image_path]
         try:
             subprocess.run(command, check=True)
-            self.speak_and_log(f"📸 Image captured successfully at: {image_path}")
+            self.speak_and_log(f"📸 Image captured successfully ")
             return image_path
         except subprocess.CalledProcessError as e:
             self.speak_and_log("❌ Failed to capture image. Please check the camera.")
@@ -54,10 +54,10 @@ class SmartMirror:
             self.speak_and_log("Sorry, I couldn't capture your image. Let's try again.")
             return
 
-        analysis = self.analyze_image(image_path)
-        if analysis.get("clarity") == "poor":
-            self.speak_and_log("Your image is unclear. Can we try retaking it?")
-            return
+        # analysis = self.analyze_image(image_path)
+        # if analysis.get("clarity") == "poor":
+        # self.speak_and_log("Your image is unclear. Can we try retaking it?")
+        # return
 
         wardrobe_items = self.nlp.fetch_wardrobe_items()
         if not wardrobe_items:
