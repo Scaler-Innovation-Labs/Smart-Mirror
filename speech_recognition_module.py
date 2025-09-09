@@ -3,7 +3,10 @@ import sys
 import speech_recognition as sr
 import logging
 from contextlib import contextmanager
-
+import openai
+import tempfile
+from dotenv import load_dotenv
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("SmartMirror")
 
@@ -22,28 +25,7 @@ def suppress_stderr():
 
 class SpeechRecognizer:
     def __init__(self):
-        self.recognizer = sr.Recognizer()
-        # Set custom thresholds for speech recognition
-        self.recognizer.dynamic_energy_threshold = True
-        self.recognizer.pause_threshold = 1.2   # Allow short pauses without stopping
-        self.recognizer.energy_threshold = 300
-
-        # Suppress ALSA/JACK logs during microphone access
-        with suppress_stderr():
-            mic_list = sr.Microphone.list_microphone_names()
-        logger.info("Available Microphones:")
-        for index, name in enumerate(mic_list):
-            logger.info(f"  [{index}] {name}")
-        
-        self.device_index = self.find_usb_microphone_index()
-
-        with suppress_stderr():
-            self.microphone = sr.Microphone(device_index=self.device_index)
-
-        with suppress_stderr():
-            with self.microphone as source:
-                self.recognizer.adjust_for_ambient_noise(source, duration=1)
-        logger.info("Calibrated microphone for ambient noise.")
+        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     def find_usb_microphone_index(self):
         with suppress_stderr():
@@ -57,22 +39,22 @@ class SpeechRecognizer:
 
     def recognize(self):
         try:
-            logger.info("Listening... (speak now)")
-            with suppress_stderr():
-                with self.microphone as source:
-                    self.recognizer.adjust_for_ambient_noise(source, duration=2)
-                    audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=7)
-            result = self.recognizer.recognize_google(audio).lower()
+            with self.microphone as source:
+                audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=7)
 
-            logger.info(f"Recognized: {result}")
-            return result
+            # Save temp wav file
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                f.write(audio.get_wav_data())
+                temp_filename = f.name
 
-        except sr.WaitTimeoutError:
-            logger.warning("Timeout: No speech detected.")
-        except sr.UnknownValueError:
-            logger.warning("Google could not understand the audio.")
-        except sr.RequestError as e:
-            logger.error(f"Google request failed: {e}")
+            # Whisper transcription
+            with open(temp_filename, "rb") as audio_file:
+                transcript = self.client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file
+                )
+            return transcript.text.lower()
+
         except Exception as e:
-            logger.error(f"Unexpected error: {e}")
-        return None
+            logger.error(f"Whisper failed: {e}")
+            return None

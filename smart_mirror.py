@@ -109,8 +109,8 @@ class SmartMirror:
 
     def run_once(self):
         """Run a single interaction."""
-        if self.listen_for_wake_word():
-            while self.active:
-                transcript = self.get_transcript()
-                if transcript:
-                    self.get_gpt_response(transcript)
+        # if self.listen_for_wake_word():
+        while self.active:
+            transcript = self.get_transcript()
+            if transcript:
+                self.get_gpt_response(transcript)
