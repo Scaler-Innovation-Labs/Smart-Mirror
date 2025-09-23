@@ -1,3 +1,4 @@
+import os
 import time
 import subprocess
 import logging
@@ -7,141 +8,162 @@ from text_to_speech import TextToSpeech
 import pvporcupine
 from pvrecorder import PvRecorder
 from dotenv import load_dotenv
+
+# Load environment variables from .env file
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Fetch and validate Picovoice Access Key
+PICOVOICE_ACCESS_KEY = os.getenv("PICOVOICE_ACCESS_KEY")
+if not PICOVOICE_ACCESS_KEY:
+    raise ValueError("PICOVOICE_ACCESS_KEY environment variable not set in .env file!")
+
 class SmartMirror:
-    def __init__(self, silence_threshold=6):
-        """Initialize components and settings."""
-        self.silence_threshold = silence_threshold
+    def __init__(self):
+        """Initialize all components of the smart mirror."""
+        logger.info("Initializing Smart Mirror components...")
         self.recognizer = SpeechRecognizer()
         self.nlp = NLPProcessor()
         self.tts = TextToSpeech()
-        self.active = True  
+        self.active = True
+        logger.info("Smart Mirror components initialized.")
 
     def speak_and_log(self, message):
-        """Speak and log the message."""
-        logger.info(message)
+        """Log a message and speak it using the TTS engine."""
+        logger.info(f"AI Response: {message}")
         self.tts.speak(message)
 
-    def capture_image(self, image_path="/home/smart-mirror/Pictures/captured_image.jpg"):
-        """Capture image using libcamera."""
-        command = ["libcamera-still", "-o", image_path]
+    def capture_image(self, image_path="/home/pi/Pictures/captured_image.jpg"):
+        """Capture an image using libcamera-still command."""
+        logger.info("Capturing image...")
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(image_path), exist_ok=True)
+        command = ["libcamera-still", "-o", image_path, "--nopreview", "-t", "500"]
         try:
-            subprocess.run(command, check=True)
-            self.speak_and_log(f"Image captured successfully ")
+            subprocess.run(command, check=True, capture_output=True, text=True)
+            logger.info(f"Image captured successfully and saved to {image_path}")
             return image_path
         except subprocess.CalledProcessError as e:
-            self.speak_and_log("Failed to capture image. Please check the camera.")
-            logger.error(f"Capture error: {e}")
+            self.speak_and_log("I'm having trouble with the camera. Please make sure it's connected properly.")
+            logger.error(f"Failed to capture image. Error: {e.stderr}")
+            return None
+        except FileNotFoundError:
+            self.speak_and_log("The camera command was not found. Please ensure libcamera-utils is installed.")
+            logger.error("`libcamera-still` command not found.")
             return None
 
+
     def capture_image_with_countdown(self):
-        """Countdown before capturing the image."""
+        """Perform a countdown and then capture an image."""
+        self.speak_and_log("Get ready for your photo!")
         for i in range(3, 0, -1):
             self.tts.speak(str(i))
-            time.sleep(1)
-        self.tts.speak("Smile!")
+            time.sleep(1.2) # Give a bit more time for speech
+        self.speak_and_log("Smile!")
+        time.sleep(0.5)
         return self.capture_image()
 
-    def analyze_image(self, image_path):
-        """Use OpenAI to analyze image clarity and key attributes."""
-        return self.nlp.analyze_user_image(image_path)
-
     def handle_fashion_request(self, transcript, intent):
-        """Handle outfit/jewelry/makeup suggestions."""
-        self.speak_and_log("Got it! Let me analyze your style. Say cheese...")
+        """Handle a fashion-related request by capturing and analyzing an image."""
+        self.speak_and_log("Of course! To give you the best advice, I'll need to take a quick photo.")
         image_path = self.capture_image_with_countdown()
         if not image_path:
-            self.speak_and_log("Sorry, I couldn't capture your image. Let's try again.")
             return
 
-        analysis = self.analyze_image(image_path)
-        if analysis.get("clarity") == "poor":
-            self.speak_and_log("Your image is unclear. Can we try retaking it?")
+        self.speak_and_log("Thanks! Analyzing your style and checking your wardrobe now...")
+        analysis = self.nlp.analyze_user_image(image_path)
+        if analysis.get("gender") == "unknown":
+            self.speak_and_log("I had a little trouble analyzing the photo. Let's try that one more time.")
             return
 
         wardrobe_items = self.nlp.fetch_wardrobe_items()
-        if not wardrobe_items:
-            self.speak_and_log("I couldn't access your wardrobe. Let's try again later.")
+        if wardrobe_items is None:
+            self.speak_and_log("I'm having trouble connecting to your wardrobe database right now.")
             return
 
         response = self.nlp.generate_fashion_response(
             transcript=transcript,
             image_path=image_path,
             wardrobe_urls=wardrobe_items,
-            requested_categories=intent
+            requested_categories=intent,
+            user_analysis=analysis
         )
         self.speak_and_log(response)
 
     def get_gpt_response(self, transcript):
-        """Determine intent and handle requests accordingly."""
+        """Determine user intent and generate an appropriate response."""
+        if not transcript:
+            return
+
+        # Simple exit condition
+        if any(phrase in transcript.lower() for phrase in ["goodbye", "stop", "that's all"]):
+            self.speak_and_log("Goodbye!")
+            self.active = False
+            return
+
         intent = self.nlp.detect_intent(transcript)
         logger.info(f"Detected intent: {intent}")
 
         if any(keyword in intent for keyword in ["outfit", "makeup", "jewelry"]):
             self.handle_fashion_request(transcript, intent)
-        elif "thank you" in transcript.lower() or "done" in transcript.lower():
-            self.speak_and_log("You're welcome! Ending the session.")
-            self.active = False
         else:
-            self.speak_and_log(self.nlp.generate_response(transcript))
+            response = self.nlp.generate_general_response(transcript)
+            self.speak_and_log(response)
 
     def get_transcript(self):
-        """Capture speech input."""
-        self.speak_and_log("I'm listening...")
+        """Capture and transcribe user's speech."""
+        self.speak_and_log("I'm listening.")
         transcript = self.recognizer.recognize()
         if transcript:
             logger.info(f"User said: {transcript}")
             return transcript
-        self.speak_and_log("I didn't catch that. Could you repeat?")
+        
+        self.speak_and_log("I didn't quite catch that. Could you say it again?")
         return None
 
-    def listen_for_wake_word(self, timeout=60):
-        """Listen for 'Hey Mirror' or 'Hello Mirror' with timeout."""
-        start_time = time.time()
-        self.speak_and_log("Listening for your wake word...")
-        while time.time() - start_time < timeout:
-            command = self.recognizer.recognize()
-            if command and ("hey mirror" in command.lower() or "hello mirror" in command.lower()):
-                self.speak_and_log("Hi there! How can I assist you today?")
-                return True
-        logger.warning("Wake word not detected within timeout.")
-        return False
+    def handle_interaction(self):
+        """Handles a single, complete interaction after the wake word is detected."""
+        transcript = self.get_transcript()
+        if transcript:
+            self.get_gpt_response(transcript)
+        # After one interaction, the main loop will listen for the wake word again.
 
     def run(self):
-        """The main loop for the mirror."""
-        
-        # 1. Initialize Porcupine for wake word detection
-        porcupine = pvporcupine.create(
-            access_key=PICOVOICE_ACCESS_KEY,
-            keywords=['hey mirror', 'hello mirror'] # It has built-in keywords!
-        )
-        recorder = PvRecorder(device_index=-1, frame_length=porcupine.frame_length)
-
-        print("Smart Mirror is running... Listening for wake word.")
-        
+        """The main application loop: listens for wake word, then handles interaction."""
         try:
-            while True:
-                # 2. Listen for the wake word (very low CPU usage)
+            porcupine = pvporcupine.create(
+                access_key=PICOVOICE_ACCESS_KEY,
+                keywords=['hey mirror', 'hello mirror']
+            )
+            recorder = PvRecorder(device_index=-1, frame_length=porcupine.frame_length)
+        except pvporcupine.PorcupineError as e:
+            logger.error(f"Failed to initialize Porcupine: {e}")
+            self.speak_and_log("I'm having a problem with my wake word engine. Please check the logs.")
+            return
+
+        logger.info("Smart Mirror is running... Listening for wake word ('Hey Mirror' or 'Hello Mirror').")
+        self.speak_and_log("I'm ready when you are. Just say 'Hey Mirror'.")
+
+        try:
+            while self.active:
                 recorder.start()
-                
-                while True:
+                while self.active:
                     pcm = recorder.read()
                     result = porcupine.process(pcm)
                     if result >= 0:
-                        print("Wake word detected!")
-                        self.speak_and_log("Hi there! How can I assist you today?")
+                        logger.info(f"Wake word detected (keyword index {result})!")
                         recorder.stop()
-                        break # Exit inner loop to handle the command
-                
-                # 3. Wake word detected! Now capture the full command with Whisper.
-                self.handle_interaction()
-
+                        self.speak_and_log("Hi there! How can I help?")
+                        self.handle_interaction()
+                        logger.info("Interaction finished. Listening for wake word again...")
+                        break # Break from inner loop to restart recorder
         except KeyboardInterrupt:
-            print("Stopping...")
+            logger.info("Shutting down Smart Mirror.")
         finally:
-            recorder.delete()
-            porcupine.delete()
+            if 'recorder' in locals() and recorder is not None:
+                recorder.delete()
+            if 'porcupine' in locals() and porcupine is not None:
+                porcupine.delete()

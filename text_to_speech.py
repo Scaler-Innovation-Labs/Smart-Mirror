@@ -17,16 +17,13 @@ except Exception as e:
     logger.error(f"Failed to initialize pygame mixer. Audio playback will not work. Error: {e}")
 
 class TextToSpeech:
-    def __init__(self, voice_id="21m00Tcm4TlvDq8ikWAM"): # Using a popular default voice 'Rachel'
-        """
-        Initializes the TextToSpeech service using the ElevenLabs API.
-        """
+    def __init__(self, voice_id="21m00Tcm4TlvDq8ikWAM"): # Default voice: 'Rachel'
+        """Initializes the TextToSpeech service using the ElevenLabs API."""
         self.api_key = os.getenv("ELEVENLABS_API_KEY")
         if not self.api_key:
             logger.warning("ELEVENLABS_API_KEY not found in .env file. TTS will not function.")
             return
 
-        # You can find voice IDs on the ElevenLabs website. 'Rachel' is a good default.
         self.voice_id = voice_id
         self.api_url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}"
         self.headers = {
@@ -36,44 +33,30 @@ class TextToSpeech:
         }
 
     def speak(self, text: str):
-        """
-        Generates audio from text using the ElevenLabs API and plays it back in a non-blocking way.
-        """
+        """Generates audio from text using ElevenLabs and plays it back non-blocking."""
         if not self.api_key or not mixer.get_init():
             logger.error("TTS service is not configured or mixer failed to initialize. Cannot speak.")
             return
-
-        # Don't make an API call for empty text
         if not text or not text.strip():
             logger.warning("Speak function called with empty text.")
             return
-
-        # Check if the mixer is busy. You might want to decide whether to queue or interrupt.
-        # For a smart assistant, interrupting the previous speech is often the desired behavior.
         if mixer.music.get_busy():
-            logger.info("Mixer is busy, stopping previous audio.")
+            logger.info("Mixer is busy, stopping previous audio before playing new.")
             mixer.music.stop()
 
         logger.info(f"🗣️ Generating speech for: '{text}'")
-        
         payload = {
             "text": text,
             "model_id": "eleven_multilingual_v2",
-            "voice_settings": {
-                "stability": 0.5,
-                "similarity_boost": 0.75
-            }
+            "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
         }
 
         try:
             response = requests.post(self.api_url, json=payload, headers=self.headers, timeout=15)
-            response.raise_for_status()  # This will raise an HTTPError for bad responses (4xx or 5xx)
+            response.raise_for_status()
 
-            # Use an in-memory bytes buffer instead of a temporary file
             audio_stream = io.BytesIO(response.content)
-            
-            # Load the audio from the memory buffer and play it
-            mixer.music.load(audio_stream)
+            mixer.music.load(audio_stream, "mp3")
             mixer.music.play()
 
         except requests.exceptions.RequestException as e:
