@@ -4,6 +4,10 @@ import logging
 from speech_recognition_module import SpeechRecognizer
 from openai_nlp import NLPProcessor
 from text_to_speech import TextToSpeech
+import pvporcupine
+from pvrecorder import PvRecorder
+from dotenv import load_dotenv
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -107,10 +111,37 @@ class SmartMirror:
         logger.warning("Wake word not detected within timeout.")
         return False
 
-    def run_once(self):
-        """Run a single interaction."""
-        # if self.listen_for_wake_word():
-        while self.active:
-            transcript = self.get_transcript()
-            if transcript:
-                self.get_gpt_response(transcript)
+    def run(self):
+        """The main loop for the mirror."""
+        
+        # 1. Initialize Porcupine for wake word detection
+        porcupine = pvporcupine.create(
+            access_key=PICOVOICE_ACCESS_KEY,
+            keywords=['hey mirror', 'hello mirror'] # It has built-in keywords!
+        )
+        recorder = PvRecorder(device_index=-1, frame_length=porcupine.frame_length)
+
+        print("Smart Mirror is running... Listening for wake word.")
+        
+        try:
+            while True:
+                # 2. Listen for the wake word (very low CPU usage)
+                recorder.start()
+                
+                while True:
+                    pcm = recorder.read()
+                    result = porcupine.process(pcm)
+                    if result >= 0:
+                        print("Wake word detected!")
+                        self.speak_and_log("Hi there! How can I assist you today?")
+                        recorder.stop()
+                        break # Exit inner loop to handle the command
+                
+                # 3. Wake word detected! Now capture the full command with Whisper.
+                self.handle_interaction()
+
+        except KeyboardInterrupt:
+            print("Stopping...")
+        finally:
+            recorder.delete()
+            porcupine.delete()

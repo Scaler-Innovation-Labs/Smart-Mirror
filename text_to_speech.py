@@ -1,36 +1,82 @@
 import os
 import requests
-import subprocess
-import tempfile
-import pyttsx3
+import logging
+from pygame import mixer
+import io
 from dotenv import load_dotenv
+
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize the pygame mixer once when the module is loaded
+try:
+    mixer.init()
+    logger.info("Pygame mixer initialized successfully for audio playback.")
+except Exception as e:
+    logger.error(f"Failed to initialize pygame mixer. Audio playback will not work. Error: {e}")
 
 class TextToSpeech:
-    def __init__(self):
+    def __init__(self, voice_id="21m00Tcm4TlvDq8ikWAM"): # Using a popular default voice 'Rachel'
+        """
+        Initializes the TextToSpeech service using the ElevenLabs API.
+        """
         self.api_key = os.getenv("ELEVENLABS_API_KEY")
-        self.voice_id = "en-US-natalie"
-        self.engine = pyttsx3.init()
-        self.engine.setProperty("rate", 160)
-        self.engine.setProperty("volume", 1.0)
+        if not self.api_key:
+            logger.warning("ELEVENLABS_API_KEY not found in .env file. TTS will not function.")
+            return
 
-    def speak(self, text):
-        print(f"🗣 Speaking: {text}")
-        if self.api_key:
-            try:
-                url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}"
-                headers = {"xi-api-key": self.api_key}
-                response = requests.post(url, headers=headers, json={"text": text})
+        # You can find voice IDs on the ElevenLabs website. 'Rachel' is a good default.
+        self.voice_id = voice_id
+        self.api_url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}"
+        self.headers = {
+            "Accept": "audio/mpeg",
+            "Content-Type": "application/json",
+            "xi-api-key": self.api_key
+        }
 
-                if response.status_code == 200:
-                    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-                        f.write(response.content)
-                        temp_filename = f.name
-                    subprocess.run(["mpg123", temp_filename])
-                    return
-            except Exception as e:
-                print(f"⚠️ ElevenLabs TTS failed, falling back: {e}")
+    def speak(self, text: str):
+        """
+        Generates audio from text using the ElevenLabs API and plays it back in a non-blocking way.
+        """
+        if not self.api_key or not mixer.get_init():
+            logger.error("TTS service is not configured or mixer failed to initialize. Cannot speak.")
+            return
 
-        # Fallback: pyttsx3
-        self.engine.say(text)
-        self.engine.runAndWait()
+        # Don't make an API call for empty text
+        if not text or not text.strip():
+            logger.warning("Speak function called with empty text.")
+            return
+
+        # Check if the mixer is busy. You might want to decide whether to queue or interrupt.
+        # For a smart assistant, interrupting the previous speech is often the desired behavior.
+        if mixer.music.get_busy():
+            logger.info("Mixer is busy, stopping previous audio.")
+            mixer.music.stop()
+
+        logger.info(f"🗣️ Generating speech for: '{text}'")
+        
+        payload = {
+            "text": text,
+            "model_id": "eleven_multilingual_v2",
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.75
+            }
+        }
+
+        try:
+            response = requests.post(self.api_url, json=payload, headers=self.headers, timeout=15)
+            response.raise_for_status()  # This will raise an HTTPError for bad responses (4xx or 5xx)
+
+            # Use an in-memory bytes buffer instead of a temporary file
+            audio_stream = io.BytesIO(response.content)
+            
+            # Load the audio from the memory buffer and play it
+            mixer.music.load(audio_stream)
+            mixer.music.play()
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API request to ElevenLabs failed: {e}")
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during TTS playback: {e}")
